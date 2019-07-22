@@ -1,5 +1,6 @@
 package com.test.loremflickr.ui;
 
+import android.os.Parcelable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,7 +23,7 @@ import butterknife.ButterKnife;
 public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder> {
 
     private final OnItemClickListener listener;
-    private List<LoremFlickrImage> items = new ArrayList<>();
+    private ArrayList<LoremFlickrImage> items = new ArrayList<>();
 
     public ImageAdapter(OnItemClickListener listener) {
         this.listener = listener;
@@ -38,7 +39,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
 
     @Override
     public void onBindViewHolder(@NonNull ImageHolder holder, int position) {
-        holder.bind(items.get(position), listener);
+        holder.bind(items.get(position), listener, position);
     }
 
     @Override
@@ -49,6 +50,16 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
     public void addItem(LoremFlickrImage image) {
         items.add(image);
         notifyItemInserted(items.size() - 1);
+    }
+
+    public void setItems(List<LoremFlickrImage> items){
+        this.items.clear();
+        this.items.addAll(items);
+        notifyDataSetChanged();
+    }
+
+    public ArrayList<LoremFlickrImage> getItems() {
+        return items;
     }
 
     public class ImageHolder extends RecyclerView.ViewHolder {
@@ -63,18 +74,18 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
             ButterKnife.bind(this, itemView);
         }
 
-        public void bind(LoremFlickrImage image, OnItemClickListener listener) {
+        public void bind(LoremFlickrImage image, OnItemClickListener listener, int position) {
             authorText.setText(image.getOwner());
             Glide.with(itemView)
                     .load(image.getImage())
                     .placeholder(R.drawable.placeholder)
                     .into(imageView);
 
-            itemView.setOnClickListener(v -> listener.onItemClick(image));
+            itemView.setOnClickListener(v -> listener.onItemClick(image, position, itemView));
         }
     }
 
     interface OnItemClickListener {
-        void onItemClick(LoremFlickrImage image);
+        void onItemClick(LoremFlickrImage image, int position, View view);
     }
 }

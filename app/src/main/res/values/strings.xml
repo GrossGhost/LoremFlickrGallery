@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">LoremflickrGallery</string>
+    <string name="image_transition" translatable="false">image transition</string>
 </resources>

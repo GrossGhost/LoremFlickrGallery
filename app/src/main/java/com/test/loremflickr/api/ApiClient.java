@@ -39,7 +39,7 @@ public class ApiClient {
     }
 
     public Observable<LoremFlickrImage> getPhoto(boolean isThumbnail, String tag, int lock){
-        int size = isThumbnail ? Constants.Image.THUMB_SIZE : Constants.Image.ORIGINAL_SIZE;
+        int size = isThumbnail ? Constants.Image.THUMB_SIZE : Constants.Image.BIG_RESOLUTION_SIZE;
 
         return api.getImage(size, size, tag, lock);
     }
