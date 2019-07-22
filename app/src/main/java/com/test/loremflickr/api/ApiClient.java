@@ -2,7 +2,9 @@ package com.test.loremflickr.api;
 
 import com.google.gson.Gson;
 import com.test.loremflickr.Constants;
+import com.test.loremflickr.model.LoremFlickrImage;
 
+import io.reactivex.Observable;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -34,5 +36,11 @@ public class ApiClient {
 
         api = retrofit.create(Api.class);
 
+    }
+
+    public Observable<LoremFlickrImage> getPhoto(boolean isThumbnail, String tag, int lock){
+        int size = isThumbnail ? Constants.Image.THUMB_SIZE : Constants.Image.ORIGINAL_SIZE;
+
+        return api.getImage(size, size, tag, lock);
     }
 }
