@@ -8,6 +8,12 @@ public class LoremFlickrImage implements Parcelable {
     private String owner;
     private int lock;
 
+    public LoremFlickrImage(){
+        file = "";
+        owner = "";
+        lock = -1;
+    }
+
     protected LoremFlickrImage(Parcel in) {
         file = in.readString();
         owner = in.readString();

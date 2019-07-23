@@ -1,5 +1,6 @@
 package com.test.loremflickr.ui;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.SharedElementCallback;
 import androidx.recyclerview.widget.RecyclerView;
@@ -7,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.app.ActivityOptions;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import com.test.loremflickr.App;
@@ -14,8 +16,10 @@ import com.test.loremflickr.Constants;
 import com.test.loremflickr.model.LoremFlickrImage;
 import com.test.loremflickr.R;
 import com.test.loremflickr.api.ApiClient;
+import com.test.loremflickr.utils.EndlessRecyclerViewScrollListener;
 import com.test.loremflickr.utils.GridAutofitLayoutManager;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,6 +28,7 @@ import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
@@ -31,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String EXTRA_IMAGE_LIST = "extra.image.list";
     private static final String EXTRA_LAST_CLICK_POSITION = "extra.last.position";
+    private static final String EXTRA_CURRENT_PAGE = "extra.curr.page";
 
     @BindView(R.id.recycler_main)
     RecyclerView recyclerView;
@@ -39,9 +45,12 @@ public class MainActivity extends AppCompatActivity {
     ApiClient apiClient;
 
     private ImageAdapter adapter;
-    private int page = 0;
+    private int currentPage = 0;
     private int lastClickedPosition;
     private String query = "sea";
+    private EndlessRecyclerViewScrollListener scrollListener;
+    private AlertDialog alertDialog;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         if (savedInstanceState != null) {
             int position = savedInstanceState.getInt(EXTRA_LAST_CLICK_POSITION);
+            currentPage = savedInstanceState.getInt(EXTRA_CURRENT_PAGE);
             adapter.setItems(savedInstanceState.getParcelableArrayList(EXTRA_IMAGE_LIST));
             recyclerView.scrollToPosition(position);
 
@@ -69,9 +79,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
-        }
-        else
-            getPhoto(page);
+        } else
+            getPhotos();
 
     }
 
@@ -79,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         outState.putParcelableArrayList(EXTRA_IMAGE_LIST, adapter.getItems());
         outState.putInt(EXTRA_LAST_CLICK_POSITION, lastClickedPosition);
+        outState.putInt(EXTRA_CURRENT_PAGE, currentPage);
         super.onSaveInstanceState(outState);
     }
 
@@ -86,8 +96,17 @@ public class MainActivity extends AppCompatActivity {
         adapter = new ImageAdapter(this::onImageClick);
 
         recyclerView.setAdapter(adapter);
-        recyclerView.setLayoutManager(new GridAutofitLayoutManager(this,
-                (int) getResources().getDimension(R.dimen.item_image_main_width)));
+        GridAutofitLayoutManager layoutManager = new GridAutofitLayoutManager(this,
+                (int) getResources().getDimension(R.dimen.item_image_main_width));
+        recyclerView.setLayoutManager(layoutManager);
+        scrollListener = new EndlessRecyclerViewScrollListener(layoutManager) {
+            @Override
+            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+                Log.d("TAG_LOAD", "loading");
+                getPhotos();
+            }
+        };
+        recyclerView.addOnScrollListener(scrollListener);
     }
 
     private void onImageClick(LoremFlickrImage image, int position, View view) {
@@ -101,19 +120,51 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent, options.toBundle());
     }
 
-    private void getPhoto(int page) {
-        int from = page * Constants.PER_PAGE;
+    private void getPhotos() {
+        int from = currentPage * Constants.PER_PAGE;
         int to = from + Constants.PER_PAGE;
+        List<Integer> locks = getLocksList(from, to);
 
-        for (int i = from; i < to; i++){
-            int lock = i;
-            apiClient.getPhoto(true, query, lock)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(image -> {
-                        image.setLock(lock);
-                        adapter.addItem(image);
-                    }, Throwable::printStackTrace);
+        Observable.fromIterable(locks)
+                .flatMap(i -> apiClient.getPhoto(true, query, i))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe(disposable -> scrollListener.setLoading(true))
+                .doOnComplete(() -> {
+                    currentPage += 1;
+                    scrollListener.onScrolled(recyclerView, recyclerView.getScrollX(), recyclerView.getScrollY());
+                    })
+                .doFinally(() -> {
+                    scrollListener.setLoading(false);
+                })
+                .subscribe(image ->
+                                adapter.addItem(image),
+                        throwable -> {
+                            showErrorDialog();
+                            throwable.printStackTrace();
+                        });
+
+    }
+
+    private void showErrorDialog() {
+        if (alertDialog == null) {
+            alertDialog = new AlertDialog.Builder(this)
+                    .setTitle(R.string.ooops)
+                    .setMessage(R.string.something_went_wrong)
+                    .setPositiveButton(R.string.try_again, (dialog, which) -> getPhotos())
+                    .create();
         }
+        if (!alertDialog.isShowing())
+            alertDialog.show();
+    }
+
+    private List<Integer> getLocksList(int from, int to) {
+        List<Integer> locks = new ArrayList<>(30);
+        for (int i = from; i < to; i++) {
+            Log.d("TAG_LOCK", "Lock: " + i);
+            locks.add(i);
+        }
+
+        return locks;
     }
 }

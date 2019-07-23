@@ -9,7 +9,7 @@ public final class Constants {
 
     public interface Image{
         int THUMB_SIZE = 300;
-        int BIG_RESOLUTION_SIZE = 640;
+        int BIG_RESOLUTION_SIZE = 720;
     }
     public interface Http {
         int TIME_OUT = 30;

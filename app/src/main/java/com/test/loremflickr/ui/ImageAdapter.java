@@ -1,6 +1,5 @@
 package com.test.loremflickr.ui;
 
-import android.os.Parcelable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
+import com.test.loremflickr.Constants;
 import com.test.loremflickr.model.LoremFlickrImage;
 import com.test.loremflickr.R;
 
@@ -52,6 +53,12 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
         notifyItemInserted(items.size() - 1);
     }
 
+    public void addItems(List<LoremFlickrImage> images) {
+        int from = items.size();
+        items.addAll(images);
+        notifyItemRangeInserted(from, Constants.PER_PAGE);
+    }
+
     public void setItems(List<LoremFlickrImage> items){
         this.items.clear();
         this.items.addAll(items);
@@ -79,6 +86,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
             Glide.with(itemView)
                     .load(image.getImage())
                     .placeholder(R.drawable.placeholder)
+                    .transition(DrawableTransitionOptions.withCrossFade(500))
                     .into(imageView);
 
             itemView.setOnClickListener(v -> listener.onItemClick(image, position, itemView));
