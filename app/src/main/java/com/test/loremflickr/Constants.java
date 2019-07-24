@@ -4,8 +4,9 @@ import java.util.concurrent.TimeUnit;
 
 public final class Constants {
 
-    public static String BASE_URL = "https://loremflickr.com/";
-    public static int PER_PAGE = 30;
+    public static final String BASE_URL = "https://loremflickr.com/";
+    public static final int PER_PAGE = 30;
+    public static final int shortAnimationDuration = 1000;
 
     public interface Image{
         int THUMB_SIZE = 300;

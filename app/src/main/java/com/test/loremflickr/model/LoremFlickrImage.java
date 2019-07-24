@@ -8,7 +8,7 @@ public class LoremFlickrImage implements Parcelable {
     private String owner;
     private int lock;
 
-    public LoremFlickrImage(){
+    public LoremFlickrImage() {
         file = "";
         owner = "";
         lock = -1;
@@ -47,6 +47,7 @@ public class LoremFlickrImage implements Parcelable {
             return new LoremFlickrImage[size];
         }
     };
+
     @Override
     public int describeContents() {
         return 0;

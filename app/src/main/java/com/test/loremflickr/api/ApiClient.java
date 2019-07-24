@@ -4,9 +4,6 @@ import com.google.gson.Gson;
 import com.test.loremflickr.Constants;
 import com.test.loremflickr.model.LoremFlickrImage;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.reactivex.Observable;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -38,37 +35,12 @@ public class ApiClient {
                 .build();
 
         api = retrofit.create(Api.class);
-
     }
 
-    public Observable<LoremFlickrImage> getPhoto(boolean isThumbnail, String tag, int lock){
+    public Observable<LoremFlickrImage> getPhoto(boolean isThumbnail, String tag, int lock) {
         int size = isThumbnail ? Constants.Image.THUMB_SIZE : Constants.Image.BIG_RESOLUTION_SIZE;
 
         return api.getImage(size, size, tag, lock)
                 .doOnNext(image -> image.setLock(lock));
-
-    }
-
-    public Observable<List<LoremFlickrImage>> getPhotos(int page, String tag){
-        int from = page * Constants.PER_PAGE;
-        int to = from + Constants.PER_PAGE;
-
-        List<Integer> locks = getLocksList(from, to);
-
-        return Observable.fromIterable(locks)
-                .flatMap(i -> getPhoto(true, tag, i))
-                .toList()
-                .toObservable();
-
-
-
-    }
-
-    private List<Integer> getLocksList(int from, int to) {
-        List<Integer> locks = new ArrayList<>(30);
-        for (int i = from; i < to; i++)
-            locks.add(i);
-
-        return locks;
     }
 }

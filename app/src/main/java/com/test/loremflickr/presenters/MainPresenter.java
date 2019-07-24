@@ -12,7 +12,7 @@ import java.util.List;
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
+import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
 
 @InjectViewState
@@ -23,7 +23,7 @@ public class MainPresenter extends MvpPresenter<MainView> {
     private ApiClient apiClient;
     private String currentTag = "sea";
     private int currentPage = 0;
-    private Disposable d;
+    private CompositeDisposable d = new CompositeDisposable();
 
     public MainPresenter(ApiClient apiClient) {
         this.apiClient = apiClient;
@@ -52,8 +52,9 @@ public class MainPresenter extends MvpPresenter<MainView> {
         int to = from + Constants.PER_PAGE;
         List<Integer> locks = getLocksList(from, to);
 
+        currentPage += 1;
         getViewState().onLoadingStart();
-        d = Observable.fromIterable(locks)
+        d.add(Observable.fromIterable(locks)
                 .flatMap(i -> apiClient.getPhoto(true, currentTag, i))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -62,14 +63,13 @@ public class MainPresenter extends MvpPresenter<MainView> {
                 .subscribe(images -> {
                             currentImages.addAll(images);
                             getViewState().onLoadingEnd();
-                            currentPage += 1;
                             getViewState().showImages(images);
                         },
                         throwable -> {
                             getViewState().onLoadingEnd();
                             getViewState().showErrorDialog();
                             throwable.printStackTrace();
-                        });
+                        }));
     }
 
     private List<Integer> getLocksList(int from, int to) {

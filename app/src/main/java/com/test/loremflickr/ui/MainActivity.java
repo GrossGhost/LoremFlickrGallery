@@ -1,10 +1,7 @@
 package com.test.loremflickr.ui;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.SharedElementCallback;
-import androidx.recyclerview.widget.RecyclerView;
-
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.ActivityOptions;
 import android.content.Intent;
 import android.os.Bundle;
@@ -14,16 +11,25 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.SharedElementCallback;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.arellomobile.mvp.MvpAppCompatActivity;
+import com.arellomobile.mvp.presenter.InjectPresenter;
+import com.arellomobile.mvp.presenter.ProvidePresenter;
 import com.miguelcatalan.materialsearchview.MaterialSearchView;
 import com.test.loremflickr.App;
 import com.test.loremflickr.Constants;
-import com.test.loremflickr.model.LoremFlickrImage;
 import com.test.loremflickr.R;
 import com.test.loremflickr.api.ApiClient;
+import com.test.loremflickr.model.LoremFlickrImage;
+import com.test.loremflickr.presenters.MainPresenter;
 import com.test.loremflickr.utils.EndlessRecyclerViewScrollListener;
 import com.test.loremflickr.utils.GridAutofitLayoutManager;
+import com.test.loremflickr.views.MainView;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,16 +38,10 @@ import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
 
-public class MainActivity extends BaseActivity {
+public class MainActivity extends MvpAppCompatActivity implements MainView {
 
-    private static final String EXTRA_IMAGE_LIST = "extra.image.list";
     private static final String EXTRA_LAST_CLICK_POSITION = "extra.last.position";
-    private static final String EXTRA_CURRENT_PAGE = "extra.curr.page";
 
     @BindView(R.id.recycler_main)
     RecyclerView recyclerView;
@@ -55,14 +55,19 @@ public class MainActivity extends BaseActivity {
     @Inject
     ApiClient apiClient;
 
+    @InjectPresenter
+    MainPresenter presenter;
+
+    @ProvidePresenter
+    MainPresenter provideMainPresenter() {
+        App.getInstance().getAppComponent().inject(this);
+        return new MainPresenter(apiClient);
+    }
+
     private ImageAdapter adapter;
-    private int currentPage = 0;
-    private int lastClickedPosition;
-    private String tag = "sea";
     private EndlessRecyclerViewScrollListener scrollListener;
     private AlertDialog alertDialog;
-    private Disposable d;
-
+    private int lastClickedPosition;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,15 +75,12 @@ public class MainActivity extends BaseActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        App.getInstance().getAppComponent().inject(this);
-
         initViews();
         if (savedInstanceState != null) {
             int position = savedInstanceState.getInt(EXTRA_LAST_CLICK_POSITION);
-            currentPage = savedInstanceState.getInt(EXTRA_CURRENT_PAGE);
-            adapter.setItems(savedInstanceState.getParcelableArrayList(EXTRA_IMAGE_LIST));
             recyclerView.scrollToPosition(position);
 
+            adapter.setItems(presenter.getCurrentImages());
             setExitSharedElementCallback(new SharedElementCallback() {
                 @Override
                 public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
@@ -92,16 +94,7 @@ public class MainActivity extends BaseActivity {
                 }
             });
         } else
-            getPhotos();
-
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        outState.putParcelableArrayList(EXTRA_IMAGE_LIST, adapter.getItems());
-        outState.putInt(EXTRA_LAST_CLICK_POSITION, lastClickedPosition);
-        outState.putInt(EXTRA_CURRENT_PAGE, currentPage);
-        super.onSaveInstanceState(outState);
+            presenter.getPhotos();
     }
 
     @Override
@@ -111,6 +104,12 @@ public class MainActivity extends BaseActivity {
         MenuItem item = menu.findItem(R.id.action_search);
         searchView.setMenuItem(item);
         return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putInt(EXTRA_LAST_CLICK_POSITION, lastClickedPosition);
+        super.onSaveInstanceState(outState);
     }
 
     private void initViews() {
@@ -125,7 +124,7 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
                 Log.d("TAG_LOAD", "loading");
-                getPhotos();
+                presenter.getPhotos();
             }
         };
         recyclerView.addOnScrollListener(scrollListener);
@@ -133,11 +132,8 @@ public class MainActivity extends BaseActivity {
         searchView.setOnQueryTextListener(new MaterialSearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                d.dispose();
-                tag = query;
-                adapter.clear();
-                currentPage = 0;
-                getPhotos();
+                presenter.setCurrentTag(query);
+                presenter.getPhotos();
                 return false;
             }
 
@@ -151,7 +147,8 @@ public class MainActivity extends BaseActivity {
     private void onImageClick(LoremFlickrImage image, int position, View view) {
         lastClickedPosition = position;
 
-        Intent intent = DetailsActivity.newInstance(this, image.getImage(), tag, image.getLock());
+        Intent intent = DetailsActivity.newInstance(MainActivity.this, image.getImage(),
+                presenter.getCurrentTag(), image.getLock(), image.getOwner());
 
         ActivityOptions options = ActivityOptions
                 .makeSceneTransitionAnimation(MainActivity.this, view, getResources().getString(R.string.image_transition));
@@ -159,70 +156,59 @@ public class MainActivity extends BaseActivity {
         startActivity(intent, options.toBundle());
     }
 
-    private void getPhotos() {
-        int from = currentPage * Constants.PER_PAGE;
-        int to = from + Constants.PER_PAGE;
-        List<Integer> locks = getLocksList(from, to);
-
-//        d = Observable.fromIterable(locks)
-//                .flatMap(i -> apiClient.getPhoto(true, tag, i))
-//                .subscribeOn(Schedulers.io())
-//                .observeOn(AndroidSchedulers.mainThread())
-//                .doOnSubscribe(disposable -> scrollListener.setLoading(true))
-//                .doOnComplete(() -> {
-//                    currentPage += 1;
-//                    scrollListener.onScrolled(recyclerView, recyclerView.getScrollX(), recyclerView.getScrollY());
-//                })
-//                .doFinally(() -> scrollListener.setLoading(false))
-//                .subscribe(image -> adapter.addItem(image),
-//                        throwable -> {
-//                            showErrorDialog();
-//                            throwable.printStackTrace();
-//                        });
-
-        progressBar.setVisibility(View.VISIBLE);
+    @Override
+    public void onLoadingStart() {
         scrollListener.setLoading(true);
-
-        d = Observable.fromIterable(locks)
-                .flatMap(i -> apiClient.getPhoto(true, tag, i))
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .toList()
-                .toObservable()
-                .subscribe(images -> {
-                            progressBar.setVisibility(View.GONE);
-                            scrollListener.setLoading(false);
-                            currentPage += 1;
-                            adapter.addItems(images);
-                    },
-                        throwable -> {
-                            progressBar.setVisibility(View.GONE);
-                            scrollListener.setLoading(false);
-                            showErrorDialog();
-                            throwable.printStackTrace();
-                        });
-
-        disposables.add(d);
+        crossfadeAnimation(progressBar, true);
     }
 
-    private void showErrorDialog() {
+    @Override
+    public void onLoadingEnd() {
+        scrollListener.setLoading(false);
+        crossfadeAnimation(progressBar, false);
+    }
+
+    private void crossfadeAnimation(View v, boolean appearing) {
+        if (appearing) {
+            v.setAlpha(0f);
+            v.setVisibility(View.VISIBLE);
+            v.animate()
+                    .alpha(1f)
+                    .setDuration(Constants.shortAnimationDuration)
+                    .setListener(null);
+        } else {
+            v.animate()
+                    .alpha(0f)
+                    .setDuration(Constants.shortAnimationDuration)
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            v.setVisibility(View.GONE);
+                        }
+                    });
+        }
+    }
+
+    @Override
+    public void showErrorDialog() {
         if (alertDialog == null) {
             alertDialog = new AlertDialog.Builder(this)
                     .setTitle(R.string.ooops)
                     .setMessage(R.string.something_went_wrong)
-                    .setPositiveButton(R.string.try_again, (dialog, which) -> getPhotos())
+                    .setPositiveButton(R.string.try_again, (dialog, which) -> presenter.getPhotos())
                     .create();
         }
         if (!alertDialog.isShowing())
             alertDialog.show();
     }
 
-    private List<Integer> getLocksList(int from, int to) {
-        List<Integer> locks = new ArrayList<>(30);
-        for (int i = from; i < to; i++) {
-            locks.add(i);
-        }
+    @Override
+    public void showImages(List<LoremFlickrImage> images) {
+        adapter.addItems(images);
+    }
 
-        return locks;
+    @Override
+    public void clearAdapter() {
+        adapter.clear();
     }
 }

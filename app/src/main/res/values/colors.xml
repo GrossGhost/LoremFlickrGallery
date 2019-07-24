@@ -7,4 +7,5 @@
     <color name="colorCardTitleBackground">#85000000</color>
     <color name="colorTitleColor">#fff</color>
     <color name="dialog_window_background">#d9ffffff</color>
+    <color name="linkColor">#0000EE</color>
 </resources>

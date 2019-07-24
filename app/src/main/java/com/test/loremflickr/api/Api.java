@@ -11,5 +11,5 @@ public interface Api {
     @GET("/json/{width}/{height}/{tag}")
     Observable<LoremFlickrImage> getImage(
             @Path("width") int width, @Path("height") int height,
-            @Path("tag") String tag,  @Query("lock") int lock);
+            @Path("tag") String tag, @Query("lock") int lock);
 }

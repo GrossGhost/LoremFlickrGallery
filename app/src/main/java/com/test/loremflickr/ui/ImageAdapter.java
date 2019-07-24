@@ -1,6 +1,5 @@
 package com.test.loremflickr.ui;
 
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +26,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
     private final OnItemClickListener listener;
     private ArrayList<LoremFlickrImage> items = new ArrayList<>();
 
-    public ImageAdapter(OnItemClickListener listener) {
+    ImageAdapter(OnItemClickListener listener) {
         this.listener = listener;
     }
 
@@ -49,45 +48,36 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
         return items.size();
     }
 
-    public void addItem(LoremFlickrImage image) {
-        items.add(image);
-        notifyItemInserted(items.size() - 1);
-    }
-
-    public void addItems(List<LoremFlickrImage> images) {
+    void addItems(List<LoremFlickrImage> images) {
         int from = items.size();
         items.addAll(images);
         notifyItemRangeInserted(from, Constants.PER_PAGE);
     }
 
-    public void setItems(List<LoremFlickrImage> items){
+    void setItems(List<LoremFlickrImage> items) {
         this.items.clear();
         this.items.addAll(items);
         notifyDataSetChanged();
     }
 
-    public ArrayList<LoremFlickrImage> getItems() {
-        return items;
-    }
-
-    public void clear() {
+    void clear() {
         items.clear();
         notifyDataSetChanged();
     }
 
-    public class ImageHolder extends RecyclerView.ViewHolder {
+    class ImageHolder extends RecyclerView.ViewHolder {
 
         @BindView(R.id.image_view_item_main)
         ImageView imageView;
         @BindView(R.id.text_view_item_main_author)
         TextView authorText;
 
-        public ImageHolder(@NonNull View itemView) {
+        ImageHolder(@NonNull View itemView) {
             super(itemView);
             ButterKnife.bind(this, itemView);
         }
 
-        public void bind(LoremFlickrImage image, OnItemClickListener listener, int position) {
+        void bind(LoremFlickrImage image, OnItemClickListener listener, int position) {
             authorText.setText(image.getOwner());
             Glide.with(itemView)
                     .load(image.getImage())
