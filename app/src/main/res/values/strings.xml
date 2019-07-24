@@ -2,6 +2,7 @@
     <string name="app_name">LoremflickrGallery</string>
     <string name="image_transition" translatable="false">image transition</string>
     <string name="ooops">Ooops!</string>
-    <string name="something_went_wrong">Something went wrong...</string>
+    <string name="something_went_wrong">Something went wrong…</string>
     <string name="try_again">TRY AGAIN</string>
+    <string name="search">Search…</string>
 </resources>

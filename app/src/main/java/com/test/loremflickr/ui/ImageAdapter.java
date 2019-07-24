@@ -1,5 +1,6 @@
 package com.test.loremflickr.ui;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -67,6 +68,11 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
 
     public ArrayList<LoremFlickrImage> getItems() {
         return items;
+    }
+
+    public void clear() {
+        items.clear();
+        notifyDataSetChanged();
     }
 
     public class ImageHolder extends RecyclerView.ViewHolder {
