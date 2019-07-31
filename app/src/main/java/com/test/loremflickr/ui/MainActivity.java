@@ -55,13 +55,13 @@ public class MainActivity extends MvpAppCompatActivity implements MainView {
     @Inject
     ApiClient apiClient;
 
+    @Inject
     @InjectPresenter
     MainPresenter presenter;
 
     @ProvidePresenter
     MainPresenter provideMainPresenter() {
-        App.getInstance().getAppComponent().inject(this);
-        return new MainPresenter(apiClient);
+        return presenter;
     }
 
     private ImageAdapter adapter;
@@ -71,6 +71,7 @@ public class MainActivity extends MvpAppCompatActivity implements MainView {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        App.getInstance().getAppComponent().inject(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);

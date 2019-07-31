@@ -22,4 +22,5 @@ public class ApiModule {
     Gson providesGson() {
         return new GsonBuilder().create();
     }
+
 }

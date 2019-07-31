@@ -50,13 +50,13 @@ public class DetailsActivity extends MvpAppCompatActivity implements DetailsView
     @Inject
     ApiClient apiClient;
 
+    @Inject
     @InjectPresenter
     DetailsPresenter presenter;
 
     @ProvidePresenter
     DetailsPresenter provideDetailsPresenter() {
-        App.getInstance().getAppComponent().inject(this);
-        return new DetailsPresenter(apiClient);
+        return presenter;
     }
 
     private String thumb;
@@ -77,6 +77,7 @@ public class DetailsActivity extends MvpAppCompatActivity implements DetailsView
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        App.getInstance().getAppComponent().inject(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details);
         ButterKnife.bind(this);

@@ -1,6 +1,7 @@
 package com.test.loremflickr.dagger;
 
 import com.test.loremflickr.dagger.modules.ApiModule;
+import com.test.loremflickr.dagger.modules.PresentersModule;
 import com.test.loremflickr.ui.DetailsActivity;
 import com.test.loremflickr.ui.MainActivity;
 
@@ -10,9 +11,8 @@ import dagger.Component;
 
 
 @Singleton
-@Component(modules = {ApiModule.class})
+@Component(modules = {ApiModule.class, PresentersModule.class})
 public interface AppComponent {
     void inject(DetailsActivity detailsActivity);
-
-    void inject(MainActivity mainMVPActivity);
+    void inject(MainActivity mainActivity);
 }
